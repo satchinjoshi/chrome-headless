@@ -1,35 +1,14 @@
-FROM ubuntu:14.04
+FROM ubuntu:xenial
 
-ENV REV=610692
+RUN apt-get -y update
+RUN apt-get -y install curl
 
-EXPOSE 9222
-
-RUN apt-get update -qqy \
-  && apt-get -qqy install libnss3 libnss3-tools libfontconfig1 wget ca-certificates apt-transport-https inotify-tools unzip \
-  libpangocairo-1.0-0 libx11-xcb-dev libxcomposite-dev libxcursor1 libxdamage1 libxi6 libgconf-2-4 libxtst6 libcups2-dev \
-  libxss-dev libxrandr-dev libasound2-dev libatk1.0-dev libgtk-3-dev ttf-ancient-fonts chromium-codecs-ffmpeg-extra libappindicator3-1 \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-
-RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64.deb \
-	&& dpkg -i dumb-init_*.deb \
-	&& rm dumb-init_1.2.0_amd64.deb
-
-RUN wget -q -O chrome.zip https://commondatastorage.googleapis.com/chromium-browser-snapshots/Linux_x64/$REV/chrome-linux.zip \
-  && unzip chrome.zip \
-  && rm chrome.zip \
-  && ln -s $PWD/chrome-linux/chrome /usr/bin/google-chrome-unstable
+RUN curl -sS -o - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add
+RUN echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list
+RUN apt-get -y update
+RUN apt-get -y install google-chrome-stable
 
 COPY fonts/ /usr/local/share/fonts/
 RUN fc-cache -svf
 
-RUN google-chrome-unstable --version
-
-ADD start.sh import_cert.sh /usr/bin/
-
-RUN mkdir /data
-VOLUME /data
-ENV HOME=/data DEBUG_ADDRESS=0.0.0.0 DEBUG_PORT=9222
-
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-
-CMD ["/usr/bin/start.sh"]
+CMD ["/usr/bin/google-chrome", "--disable-gpu", "--headless", "--no-sandbox", "--remote-debugging-address=0.0.0.0", "--remote-debugging-port=9222", "--user-data-dir=/data", "--disable-dev-shm-usage"]
